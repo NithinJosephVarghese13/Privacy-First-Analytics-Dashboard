@@ -18,18 +18,18 @@ export async function GET(request: NextRequest) {
     consentGiven: true,
   };
 
+  const timestampFilter: any = {};
+
   if (startDate) {
-    where.timestamp = {
-      ...where.timestamp,
-      gte: new Date(startDate),
-    };
+    timestampFilter.gte = new Date(startDate);
   }
 
   if (endDate) {
-    where.timestamp = {
-      ...where.timestamp,
-      lte: new Date(endDate),
-    };
+    timestampFilter.lte = new Date(endDate);
+  }
+
+  if (Object.keys(timestampFilter).length > 0) {
+    where.timestamp = timestampFilter;
   }
 
   const events = await prisma.event.findMany({

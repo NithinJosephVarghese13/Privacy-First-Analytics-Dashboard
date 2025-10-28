@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { anonymizeVisitor, getClientIp } from "@/lib/anonymize";
+import { createEventEmbedding } from "@/lib/embeddings";
 import { z } from "zod";
 
 const trackSchema = z.object({
@@ -43,6 +44,10 @@ export async function POST(request: NextRequest) {
         consentGiven: data.consentGiven,
       },
     });
+
+    if (data.consentGiven) {
+      createEventEmbedding(event.id).catch(console.error);
+    }
 
     return NextResponse.json({ success: true, eventId: event.id });
   } catch (error) {
