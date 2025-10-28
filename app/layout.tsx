@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Providers from "@/components/Providers";
+import Navbar from "@/components/Navbar";
+import ConsentBanner from "@/components/ConsentBanner";
 
 export const metadata: Metadata = {
   title: "Privacy-First Analytics Dashboard",
@@ -14,7 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <Providers>
+          <Navbar />
+          {children}
+          <ConsentBanner />
+        </Providers>
       </body>
     </html>
   );
