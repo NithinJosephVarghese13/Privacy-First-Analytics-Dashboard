@@ -40,3 +40,7 @@ prisma/*.db-journal
 # ide
 .vscode
 .idea
+
+
+/.gemini/
+/.qodo/
