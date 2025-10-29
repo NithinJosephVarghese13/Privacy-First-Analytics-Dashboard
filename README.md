@@ -1,6 +1,6 @@
 # Privacy-First Analytics Dashboard
 
-A production-ready, GDPR-compliant analytics platform with AI-powered insights built with Next.js 15, PostgreSQL, and OpenAI.
+A production-ready, GDPR-compliant analytics platform with AI-powered insights built with Next.js 16, PostgreSQL, and OpenAI.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.0-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-blue?logo=react)
