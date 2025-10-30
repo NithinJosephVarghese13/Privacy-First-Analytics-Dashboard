@@ -185,7 +185,7 @@ const { answer, usedVectorSearch } = await response.json();
 - Encrypted sessions with httpOnly cookies
 - Role-based access control (RBAC)
 - SQL injection prevention (Prisma ORM)
-- Rate limiting on public endpoints
+- Rate limiting on public endpoints (Upstash Redis, 60 req/min per IP)
 - Environment variable secrets
 
 ## 🛠️ Development
