@@ -3,17 +3,41 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createEventEmbedding } from "@/lib/embeddings";
+import { log } from "@/lib/logger";
+import { ratelimit, getCachedAnalytics, setCachedAnalytics, invalidateAnalyticsCache } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  
+
   if (!session) {
+    log.warn("Unauthorized access attempt to events API");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limiting
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const { success } = await ratelimit.limit(ip);
+
+  if (!success) {
+    log.warn("Rate limit exceeded", { ip });
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const { searchParams } = new URL(request.url);
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
+
+  // Create cache key based on query parameters
+  const cacheKey = `${startDate || 'none'}-${endDate || 'none'}`;
+
+  // Try to get cached data first
+  const cachedData = await getCachedAnalytics(cacheKey);
+  if (cachedData) {
+    log.info("Serving cached analytics data", { cacheKey });
+    return NextResponse.json(cachedData);
+  }
+
+  log.info("Fetching analytics events", { startDate, endDate });
 
   const where: any = {
     consentGiven: true,
@@ -56,8 +80,9 @@ export async function GET(request: NextRequest) {
       for (const event of eventsWithoutEmbeddings.slice(0, 10)) { // Limit to 10 per request
         try {
           await createEventEmbedding(event.id);
+          log.debug("Created embedding for event", { eventId: event.id });
         } catch (error) {
-          console.error(`Failed to create embedding for event ${event.id}:`, error);
+          log.error("Failed to create embedding for event", { eventId: event.id, error: String(error) });
         }
       }
     });
@@ -77,11 +102,18 @@ export async function GET(request: NextRequest) {
 
   const uniqueVisitors = new Set(events.map((e) => e.visitorHash)).size;
 
-  return NextResponse.json({
+  const result = {
     totalViews,
     uniqueVisitors,
     totalEvents: events.length,
     pageStats: Object.values(pageStats),
     recentEvents: events.slice(0, 50),
-  });
+  };
+
+  // Cache the result
+  await setCachedAnalytics(cacheKey, result);
+
+  log.info("Analytics data computed and cached", { cacheKey, totalEvents: events.length });
+
+  return NextResponse.json(result);
 }

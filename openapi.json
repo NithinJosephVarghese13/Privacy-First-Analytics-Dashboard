@@ -1,0 +1,279 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Privacy-First Analytics API",
+    "description": "GDPR-compliant analytics platform with AI insights",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@privacyfirstanalytics.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.privacyfirstanalytics.com",
+      "description": "Production server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/track": {
+      "post": {
+        "summary": "Track user events",
+        "description": "Record user interactions and page views",
+        "tags": ["Tracking"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event recorded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "summary": "Get analytics data",
+        "description": "Retrieve aggregated analytics data for dashboard",
+        "tags": ["Analytics"],
+        "parameters": [
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "Start date for filtering events (ISO 8601)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "End date for filtering events (ISO 8601)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Check service health and connectivity",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "required": ["eventType", "pageUrl", "visitorHash", "consentGiven"],
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "enum": ["pageview", "click", "scroll"],
+            "description": "Type of user event"
+          },
+          "pageUrl": {
+            "type": "string",
+            "description": "URL of the page where event occurred"
+          },
+          "pageTitle": {
+            "type": "string",
+            "description": "Title of the page"
+          },
+          "visitorHash": {
+            "type": "string",
+            "description": "Anonymized visitor identifier"
+          },
+          "consentGiven": {
+            "type": "boolean",
+            "description": "Whether user has given consent for tracking"
+          },
+          "element": {
+            "type": "string",
+            "description": "Clicked element selector (for click events)"
+          },
+          "scrollDepth": {
+            "type": "number",
+            "description": "Scroll depth percentage (for scroll events)"
+          }
+        }
+      },
+      "AnalyticsResponse": {
+        "type": "object",
+        "properties": {
+          "totalViews": {
+            "type": "integer",
+            "description": "Total page views"
+          },
+          "uniqueVisitors": {
+            "type": "integer",
+            "description": "Number of unique visitors"
+          },
+          "totalEvents": {
+            "type": "integer",
+            "description": "Total events recorded"
+          },
+          "pageStats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PageStats"
+            }
+          },
+          "recentEvents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          }
+        }
+      },
+      "PageStats": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Page URL"
+          },
+          "title": {
+            "type": "string",
+            "description": "Page title"
+          },
+          "views": {
+            "type": "integer",
+            "description": "Number of views"
+          },
+          "clicks": {
+            "type": "integer",
+            "description": "Number of clicks"
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["healthy", "unhealthy"],
+            "description": "Service health status"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Current timestamp"
+          },
+          "version": {
+            "type": "string",
+            "description": "API version"
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Event recorded successfully"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "code": {
+            "type": "string",
+            "description": "Error code"
+          }
+        }
+      }
+    }
+  }
+}
