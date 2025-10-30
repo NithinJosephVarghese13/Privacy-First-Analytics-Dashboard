@@ -3,22 +3,53 @@ import { prisma } from "@/lib/prisma";
 import { anonymizeVisitor, getClientIp } from "@/lib/anonymize";
 import { createEventEmbedding } from "@/lib/embeddings";
 import { z } from "zod";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+const ratelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, "1 m"),
+  analytics: true,
+});
 
 const trackSchema = z.object({
   page: z.string().url(),
   type: z.enum(["pageview", "click", "form_submit"]),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   consentGiven: z.boolean().default(false),
   title: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request.headers);
+
+    const { success, reset } = await ratelimit.limit(ip);
+
+    if (!success) {
+      const resetTime = new Date(reset * 1000);
+      const retryAfter = Math.ceil((resetTime.getTime() - Date.now()) / 1000);
+
+      return NextResponse.json(
+        { success: false, error: "Rate limit exceeded" },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": retryAfter.toString(),
+          },
+        }
+      );
+    }
+
     const body = await request.json();
     const data = trackSchema.parse(body);
 
     const userAgent = request.headers.get("user-agent") || "";
-    const ip = getClientIp(request.headers);
     const visitorHash = anonymizeVisitor(ip, userAgent);
 
     let page = await prisma.page.findUnique({
@@ -40,7 +71,7 @@ export async function POST(request: NextRequest) {
         eventType: data.type,
         visitorHash,
         userAgent,
-        metadata: data.metadata || {},
+        metadata: data.metadata ? JSON.parse(JSON.stringify(data.metadata)) : {},
         consentGiven: data.consentGiven,
       },
     });

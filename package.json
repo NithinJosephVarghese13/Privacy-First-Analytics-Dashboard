@@ -37,7 +37,9 @@
     "recharts": "^3.3.0",
     "tailwindcss": "^4.1.16",
     "typescript": "^5.9.3",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "@upstash/ratelimit": "^2.0.0",
+    "@upstash/redis": "^1.34.0"
   },
   "devDependencies": {
     "tsx": "^4.20.6"
