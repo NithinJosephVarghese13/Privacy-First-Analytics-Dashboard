@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { createEventEmbedding } from "@/lib/embeddings";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -36,12 +37,31 @@ export async function GET(request: NextRequest) {
     where,
     include: {
       page: true,
+      embeddings: true,
     },
     orderBy: {
       timestamp: "desc",
     },
     take: 1000,
   });
+
+  // Generate embeddings for events that don't have them yet
+  const eventsWithoutEmbeddings = events.filter(event =>
+    !event.embeddings || event.embeddings.length === 0
+  );
+
+  // Process embeddings asynchronously (don't block the response)
+  if (eventsWithoutEmbeddings.length > 0) {
+    setImmediate(async () => {
+      for (const event of eventsWithoutEmbeddings.slice(0, 10)) { // Limit to 10 per request
+        try {
+          await createEventEmbedding(event.id);
+        } catch (error) {
+          console.error(`Failed to create embedding for event ${event.id}:`, error);
+        }
+      }
+    });
+  }
 
   const totalViews = events.filter((e) => e.eventType === "pageview").length;
 

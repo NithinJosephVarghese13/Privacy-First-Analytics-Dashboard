@@ -1,7 +1,6 @@
-version: '3.8'
 services:
   postgres:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     restart: always
     environment:
       POSTGRES_USER: user
@@ -11,6 +10,7 @@ services:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql
   redis:
     image: redis:7
     restart: always

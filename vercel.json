@@ -1,0 +1,13 @@
+{
+  "regions": ["fra1"],
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "NEXTAUTH_URL": "@nextauth-url"
+  },
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci"
+}
