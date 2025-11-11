@@ -3,8 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { anonymizeVisitor, getClientIp } from "@/lib/anonymize";
 import { createEventEmbedding } from "@/lib/embeddings";
 import { z } from "zod";
-import { log } from "@/lib/logger";
-import { ratelimit, invalidateAnalyticsCache } from "@/lib/cache";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+const ratelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, "1 m"),
+  analytics: true,
+});
 
 const trackSchema = z.object({
   page: z.string().url(),
@@ -66,21 +77,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (data.consentGiven) {
-      createEventEmbedding(event.id).catch((error) =>
-        log.error("Failed to create embedding for event", { eventId: event.id, error: String(error) })
-      );
+      createEventEmbedding(event.id).catch(console.error);
     }
-
-    // Invalidate analytics cache when new events are added
-    invalidateAnalyticsCache().catch((error) =>
-      log.error("Failed to invalidate analytics cache", { error: String(error) })
-    );
-
-    log.info("Event tracked successfully", { eventId: event.id, eventType: data.type });
 
     return NextResponse.json({ success: true, eventId: event.id });
   } catch (error) {
-    log.error("Track error", { error: String(error) });
+    console.error("Track error:", error);
     return NextResponse.json(
       { success: false, error: "Invalid request" },
       { status: 400 }
